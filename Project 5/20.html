@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL Masterclass | Day 20: OCD Patient Clinical Analytics Portfolio Project</title>
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --accent-bg: #e0f2fe;
+      --dark: #0f172a;
+      --slate: #334155;
+      --light-slate: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --highlight-bg: #fef08a;
+      --highlight-border: #ca8a04;
+      --matched-bg: #bbf7d0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+    body { background-color: #0b0f19; color: var(--dark); overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+    #progress-container { width: 100%; height: 6px; background: #1e293b; }
+    #progress-bar { height: 100%; width: 2%; background: linear-gradient(90deg, #38bdf8, #0284c7); transition: width 0.3s ease; }
+    #presentation { flex: 1; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 16px; }
+    .slide {
+      position: absolute; width: 94%; max-width: 1160px; height: 86vh; background: #ffffff;
+      border-radius: var(--radius); box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45); padding: 26px 44px;
+      display: flex; flex-direction: column; opacity: 0; pointer-events: none;
+      transform: translateY(20px) scale(0.98); transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); overflow-y: auto;
+    }
+    .slide.active { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); z-index: 10; }
+    .slide-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
+    .topic-tag { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; color: var(--primary); background: var(--accent-bg); padding: 4px 12px; border-radius: 6px; }
+    .slide-title { font-size: 1.62rem; font-weight: 800; color: #0f172a; line-height: 1.25; }
+    .slide-subtitle { font-size: 0.96rem; color: var(--light-slate); margin-top: 2px; }
+    .slide-body { flex: 1; display: flex; flex-direction: column; gap: 10px; justify-content: center; font-size: 0.95rem; line-height: 1.5; color: var(--slate); }
+    .analogy-card { background: #f8fafc; border-left: 5px solid var(--primary); padding: 10px 16px; border-radius: 0 var(--radius) var(--radius) 0; margin: 4px 0; }
+    .analogy-title { font-weight: 700; color: var(--primary); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 4px 0; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .feature-box { border: 1px solid var(--border); padding: 12px 14px; border-radius: 10px; background: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+    .feature-box h4 { color: #0f172a; margin-bottom: 4px; font-size: 1rem; }
+    table.data-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.83rem; }
+    table.data-table th, table.data-table td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+    table.data-table th { background-color: #f1f5f9; color: #0f172a; font-weight: 700; }
+    table.data-table tr:nth-child(even) { background-color: #f8fafc; }
+    .cell-hl { background-color: var(--highlight-bg) !important; font-weight: bold; border: 2px solid var(--highlight-border) !important; color: #854d0e !important; }
+    .col-hl { background-color: #e0f2fe !important; font-weight: 600; border-left: 2px solid #0284c7 !important; border-right: 2px solid #0284c7 !important; }
+    .row-hl { background-color: #fef08a !important; font-weight: 600; }
+    .code-snippet { background: #0f172a; color: #93c5fd; padding: 10px 14px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.82rem; line-height: 1.4; overflow-x: auto; }
+    .code-keyword { color: #f87171; font-weight: bold; }
+    .code-table { color: #86efac; }
+    .code-comment { color: #94a3b8; font-style: italic; }
+    .simulator-panel { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; margin-top: 4px; }
+    .sim-btn { background: #0284c7; color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s; }
+    .sim-btn:hover { background: #0369a1; }
+    .sim-btn.student { background: #16a34a; }
+    .sim-btn.student:hover { background: #15803d; }
+    .sim-reveal { display: none; margin-top: 6px; padding: 6px 10px; background: #ffffff; border-left: 4px solid #0284c7; border-radius: 4px; font-size: 0.84rem; }
+    .bullet-list { list-style-type: none; display: flex; flex-direction: column; gap: 6px; }
+    .bullet-list li { position: relative; padding-left: 20px; }
+    .bullet-list li::before { content: "➔"; position: absolute; left: 0; color: var(--primary); font-weight: bold; }
+    #controls { background: #111827; border-top: 1px solid #1f2937; padding: 8px 24px; display: flex; justify-content: space-between; align-items: center; color: #9ca3af; }
+    .nav-btn { background: #1f2937; color: #f9fafb; border: 1px solid #374151; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    .nav-btn:hover { background: var(--primary); border-color: var(--primary); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    #counter { font-size: 0.85rem; font-weight: 600; }
+    .key-tip { font-size: 0.72rem; color: #6b7280; }
+  </style>
+</head>
+<body>
+
+  <div id="progress-container">
+    <div id="progress-bar"></div>
+  </div>
+
+  <div id="presentation">
+
+    <!-- Slide 1 -->
+    <div class="slide active">
+      <div class="slide-header">
+        <span class="topic-tag">Day 20 • Grand Finale Capstone</span>
+        <span class="slide-number">Slide 1 / 50</span>
+      </div>
+      <div class="slide-body" style="text-align:center; align-items:center;">
+        <h1 style="font-size: 2.3rem; color: #0284c7; margin-bottom: 6px;">OCD Patient Clinical Analytics Portfolio Project</h1>
+        <p style="font-size: 1.15rem; color: #334155; font-weight: 600;">Day 20: End-to-End Healthcare SQL Project on Patient Demographics, Y-BOCS Severity &amp; Comorbidities</p>
+        <div style="margin-top: 14px; max-width: 820px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: left;">
+          <p style="font-size: 0.95rem; color: #475569;">
+            Welcome to Day 20—the grand finale of our 20-day SQL Masterclass! For our final portfolio project, we explore healthcare analytics using the <strong>OCD Patient Clinical Dataset</strong> (<code>ocd_patient.csv</code>). We will ingest 1,500 patient records into MySQL Workbench, clean missing medical notes, solve 15 clinical and demographic inquiries, and package a professional GitHub repository.
+          </p>
+        </div>
+        <p style="margin-top: 10px; font-weight: 600; color: #64748b;">Dataset: <code>ocd_patient.csv</code> | 1,500 Clinical Patient Records</p>
+      </div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Portfolio Context</span>
+        <span class="slide-number">Slide 2 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Why This Healthcare Clinical Project Stands Out</h2>
+        <p class="slide-subtitle">Bridging SQL engineering with psychological research, patient demographics, and treatment outcomes</p>
+        <div class="grid-2">
+          <div class="feature-box">
+            <h4>The Clinical Context</h4>
+            <p style="font-size:0.85rem; color:#64748b;">Healthcare researchers and clinical psychologists need to evaluate Obsessive-Compulsive Disorder (OCD) symptom severity using Y-BOCS scores, track comorbidity rates (Depression/Anxiety), and assess medication efficacies.</p>
+          </div>
+          <div class="feature-box" style="border-left: 4px solid #0284c7;">
+            <h4>What You Will Showcase</h4>
+            <ul class="bullet-list" style="font-size:0.82rem;">
+              <li><strong>Schema Ingestion:</strong> Loading multi-attribute patient records into MySQL.</li>
+              <li><strong>Advanced SQL:</strong> Window rankings, CTEs, conditional CASE scoring, and demographic aggregations.</li>
+              <li><strong>GitHub Presentation:</strong> A professional README.md summarizing clinical insights.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Dataset Architecture</span>
+        <span class="slide-number">Slide 3 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Exploring the <code>ocd_patient</code> Schema</h2>
+        <p class="slide-subtitle">Understanding the 17 clinical columns inside our CSV file</p>
+        <table class="data-table">
+          <thead><tr><th>Column Name</th><th>Data Type</th><th>Clinical Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>Patient ID</code></td><td>INT</td><td>Unique identifier for each clinical patient (Primary Key)</td></tr>
+            <tr><td><code>Age</code></td><td>INT</td><td>Patient age in years (Range: 18 to 75)</td></tr>
+            <tr><td><code>Gender</code></td><td>VARCHAR(10)</td><td>Biological gender ('Male' or 'Female')</td></tr>
+            <tr><td><code>Ethnicity</code></td><td>VARCHAR(50)</td><td>Patient ethnic background (Caucasian, African, Asian, Hispanic)</td></tr>
+            <tr><td><code>Marital Status</code></td><td>VARCHAR(30)</td><td>Relationship status (Single, Divorced, Married)</td></tr>
+            <tr><td><code>Education Level</code></td><td>VARCHAR(30)</td><td>Highest educational attainment (College Degree, High School, etc.)</td></tr>
+            <tr><td><code>OCD Diagnosis Date</code></td><td>DATE</td><td>Date of formal clinical OCD diagnosis</td></tr>
+            <tr><td><code>Duration of Symptoms (months)</code></td><td>INT</td><td>Symptom duration prior to diagnosis in months</td></tr>
+            <tr><td><code>Previous Diagnoses</code></td><td>VARCHAR(50)</td><td>Prior psychological conditions (MDD, Tourette's, etc.; has NULLs)</td></tr>
+            <tr><td><code>Family History of OCD</code></td><td>VARCHAR(10)</td><td>Hereditary history ('Yes' or 'No')</td></tr>
+            <tr><td><code>Obsession Type</code></td><td>VARCHAR(50)</td><td>Primary obsession category (Harm-related, Contamination, etc.)</td></tr>
+            <tr><td><code>Compulsion Type</code></td><td>VARCHAR(50)</td><td>Primary compulsion behavior (Checking, Washing, Ordering, etc.)</td></tr>
+            <tr><td><code>Y-BOCS Score (Obsessions)</code></td><td>INT</td><td>Yale-Brown Obsessive Compulsive Scale - Obsessions (0 to 40)</td></tr>
+            <tr><td><code>Y-BOCS Score (Compulsions)</code></td><td>INT</td><td>Yale-Brown Obsessive Compulsive Scale - Compulsions (0 to 40)</td></tr>
+            <tr><td><code>Depression Diagnosis</code></td><td>VARCHAR(10)</td><td>Comorbid depression status ('Yes' or 'No')</td></tr>
+            <tr><td><code>Anxiety Diagnosis</code></td><td>VARCHAR(10)</td><td>Comorbid anxiety status ('Yes' or 'No')</td></tr>
+            <tr><td><code>Medications</code></td><td>VARCHAR(50)</td><td>Prescribed pharmaceutical treatment (SSRI, SNRI, Benzodiazepine; has NULLs)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Project Roadmap</span>
+        <span class="slide-number">Slide 4 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">The 4-Phase Clinical Project Blueprint</h2>
+        <p class="slide-subtitle">Our structured execution plan in MySQL Workbench</p>
+        <div class="grid-2">
+          <div class="feature-box" style="border-top:4px solid #0284c7;">
+            <h4>Phase 1: Setup &amp; Ingestion (DDL)</h4>
+            <p style="font-size:0.82rem; color:#64748b;">Creating <code>ocd_db</code>, building the table schema, and importing <code>ocd_patient.csv</code>.</p>
+          </div>
+          <div class="feature-box" style="border-top:4px solid #16a34a;">
+            <h4>Phase 2: Data Cleansing &amp; Hygiene</h4>
+            <p style="font-size:0.82rem; color:#64748b;">Auditing missing values in previous diagnoses and medication records.</p>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:6px;">
+          <div class="feature-box" style="border-top:4px solid #f59e0b;">
+            <h4>Phase 3: Solving 15 Clinical Problems</h4>
+            <p style="font-size:0.82rem; color:#64748b;">Writing production SQL queries for patient demographics, Y-BOCS severity scores, and comorbidity rates.</p>
+          </div>
+          <div class="feature-box" style="border-top:4px solid #8b5cf6;">
+            <h4>Phase 4: GitHub Packaging &amp; Resume Polish</h4>
+            <p style="font-size:0.82rem; color:#64748b;">Structuring SQL script files and writing an impactful portfolio README.md.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Phase 1 • Setup</span>
+        <span class="slide-number">Slide 5 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Phase 1: Creating the Database &amp; Table Schema</h2>
+        <p class="slide-subtitle">Allocating our MySQL Workbench workspace</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Step 1: Create Database</span>
+<span class="code-keyword">CREATE DATABASE IF NOT EXISTS</span> <span class="code-table">ocd_db</span>;
+<span class="code-keyword">USE</span> <span class="code-table">ocd_db</span>;
+
+<span class="code-comment">-- Step 2: Create Table Schema</span>
+<span class="code-keyword">DROP TABLE IF EXISTS</span> <span class="code-table">ocd_patients</span>;
+<span class="code-keyword">CREATE TABLE</span> <span class="code-table">ocd_patients</span> (
+    patient_id <span class="code-keyword">INT PRIMARY KEY</span>,
+    age <span class="code-keyword">INT</span>,
+    gender <span class="code-keyword">VARCHAR</span>(10),
+    ethnicity <span class="code-keyword">VARCHAR</span>(50),
+    marital_status <span class="code-keyword">VARCHAR</span>(30),
+    education_level <span class="code-keyword">VARCHAR</span>(30),
+    ocd_diagnosis_date <span class="code-keyword">DATE</span>,
+    duration_of_symptoms_months <span class="code-keyword">INT</span>,
+    previous_diagnoses <span class="code-keyword">VARCHAR</span>(50),
+    family_history_of_ocd <span class="code-keyword">VARCHAR</span>(10),
+    obsession_type <span class="code-keyword">VARCHAR</span>(50),
+    compulsion_type <span class="code-keyword">VARCHAR</span>(50),
+    ybocs_score_obsessions <span class="code-keyword">INT</span>,
+    ybocs_score_compulsions <span class="code-keyword">INT</span>,
+    depression_diagnosis <span class="code-keyword">VARCHAR</span>(10),
+    anxiety_diagnosis <span class="code-keyword">VARCHAR</span>(10),
+    medications <span class="code-keyword">VARCHAR</span>(50)
+);
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 6 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Phase 1 • Ingestion</span>
+        <span class="slide-number">Slide 6 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Ingesting the Dataset via Table Data Import Wizard</h2>
+        <p class="slide-subtitle">Loading all 1,500 raw patient records from <code>ocd_patient.csv</code></p>
+        <div class="grid-2">
+          <div class="feature-box">
+            <h4>Import Steps in Workbench</h4>
+            <ol class="bullet-list" style="font-size:0.82rem; padding-left:14px;">
+              <li>Right-click <code>ocd_patients</code> in Schema Navigator &rarr; Click <strong>Table Data Import Wizard</strong>.</li>
+              <li>Select <code>ocd_patient.csv</code>.</li>
+              <li>Map to existing table <code>ocd_patients</code>.</li>
+              <li>Confirm data types and utf-8 encoding.</li>
+              <li>Execute import to load all 1,500 rows.</li>
+            </ol>
+          </div>
+          <div class="feature-box">
+            <h4>Verification Query</h4>
+            <div class="code-snippet" style="font-size:0.75rem; margin-top:6px;">
+<span class="code-keyword">SELECT COUNT</span>(*) <span class="code-keyword">AS</span> total_patients 
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>;
+            </div>
+            <p style="margin-top:8px; color:#0284c7; font-weight:700;">Result: 1,500 patient records loaded successfully!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 7 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Phase 2 • Hygiene</span>
+        <span class="slide-number">Slide 7 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Phase 2: Data Cleansing &amp; NULL Auditing</h2>
+        <p class="slide-subtitle">Checking for missing values in previous diagnoses and medications</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Audit missing values:</span>
+<span class="code-keyword">SELECT</span> 
+    <span class="code-keyword">SUM</span>(<span class="code-keyword">CASE WHEN</span> previous_diagnoses <span class="code-keyword">IS NULL</span> <span class="code-keyword">THEN</span> 1 <span class="code-keyword">ELSE</span> 0 <span class="code-keyword">END</span>) <span class="code-keyword">AS</span> missing_prev_diag,
+    <span class="code-keyword">SUM</span>(<span class="code-keyword">CASE WHEN</span> medications <span class="code-keyword">IS NULL</span> <span class="code-keyword">THEN</span> 1 <span class="code-keyword">ELSE</span> 0 <span class="code-keyword">END</span>) <span class="code-keyword">AS</span> missing_meds
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th>Column Audited</th><th class="col-hl">NULL Count</th><th>Remediation Strategy</th></tr></thead>
+          <tbody>
+            <tr><td>previous_diagnoses</td><td class="cell-hl">248 Rows</td><td>Treat NULL as 'None Recorded' or leave unassigned for clinical review</td></tr>
+            <tr><td>medications</td><td class="cell-hl">386 Rows</td><td>Treat NULL as 'Unmedicated / None' for observational baselines</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.84rem; color:#0284c7; font-weight:700;">No critical core clinical fields (Age, Gender, Y-BOCS scores) contain nulls!</p>
+      </div>
+    </div>
+
+    <!-- Slide 8 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Phase 3 • Clinical Questions</span>
+        <span class="slide-number">Slide 8 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Phase 3: The 15 Core Clinical Inquiries</h2>
+        <p class="slide-subtitle">Overview of interview-grade healthcare SQL questions solved in this project</p>
+        <div class="grid-2">
+          <div class="feature-box">
+            <ol class="bullet-list" style="font-size:0.74rem; padding-left:12px;">
+              <li><strong>Q1:</strong> Count total patients in the clinical study.</li>
+              <li><strong>Q2:</strong> Find the gender breakdown of OCD patients.</li>
+              <li><strong>Q3:</strong> Calculate average age of patients across genders.</li>
+              <li><strong>Q4:</strong> Find the most common obsession type.</li>
+              <li><strong>Q5:</strong> Find the most common compulsion type.</li>
+              <li><strong>Q6:</strong> Average Y-BOCS Obsession and Compulsion scores.</li>
+              <li><strong>Q7:</strong> Count patients with comorbid depression and anxiety.</li>
+              <li><strong>Q8:</strong> Find average Y-BOCS total score by ethnicity.</li>
+            </ol>
+          </div>
+          <div class="feature-box">
+            <ol class="bullet-list" style="font-size:0.74rem; padding-left:12px;" start="9">
+              <li><strong>Q9:</strong> Patients with family history of OCD vs. without.</li>
+              <li><strong>Q10:</strong> Top prescribed medications across the patient cohort.</li>
+              <li><strong>Q11:</strong> Average duration of symptoms (months) by marital status.</li>
+              <li><strong>Q12:</strong> Rank patients by total Y-BOCS score using DENSE_RANK().</li>
+              <li><strong>Q13:</strong> Find patients whose Y-BOCS total score exceeds the cohort average.</li>
+              <li><strong>Q14:</strong> Calculate cumulative patient counts by OCD diagnosis year.</li>
+              <li><strong>Q15:</strong> Categorize patient severity ('Severe' if total Y-BOCS &gt; 30, 'Moderate' &gt; 20, else 'Mild').</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 9 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 1</span>
+        <span class="slide-number">Slide 9 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q1: Count Total Patients in the Clinical Study</h2>
+        <p class="slide-subtitle">Portfolio Solution 1: Basic row counting</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 1:</span>
+<span class="code-keyword">SELECT COUNT</span>(*) <span class="code-keyword">AS</span> total_patients 
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th class="col-hl">total_patients</th></tr></thead>
+          <tbody><tr class="row-matched"><td class="cell-hl">1,500</td></tr></tbody>
+        </table>
+        <p style="font-size:0.84rem; color:#64748b;">Establishes baseline clinical study sample size.</p>
+      </div>
+    </div>
+
+    <!-- Slide 10 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 2</span>
+        <span class="slide-number">Slide 10 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q2: Gender Breakdown of OCD Patients</h2>
+        <p class="slide-subtitle">Portfolio Solution 2: Grouping by biological gender</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 2:</span>
+<span class="code-keyword">SELECT</span> gender, <span class="code-keyword">COUNT</span>(*) <span class="code-keyword">AS</span> patient_count
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">GROUP BY</span> gender;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th>gender</th><th class="col-hl">patient_count</th></tr></thead>
+          <tbody>
+            <tr><td>Male</td><td class="cell-hl">753</td></tr>
+            <tr><td>Female</td><td class="cell-hl">747</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 11 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 3</span>
+        <span class="slide-number">Slide 11 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q3: Calculate Average Age Across Genders</h2>
+        <p class="slide-subtitle">Portfolio Solution 3: AVG aggregation by gender</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 3:</span>
+<span class="code-keyword">SELECT</span> gender, <span class="code-keyword">ROUND</span>(<span class="code-keyword">AVG</span>(age), 2) <span class="code-keyword">AS</span> avg_age
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">GROUP BY</span> gender;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th>gender</th><th class="col-hl">avg_age</th></tr></thead>
+          <tbody>
+            <tr><td>Male</td><td class="cell-hl">46.75</td></tr>
+            <tr><td>Female</td><td class="cell-hl">46.81</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 12 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 4</span>
+        <span class="slide-number">Slide 12 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q4: Find the Most Common Obsession Type</h2>
+        <p class="slide-subtitle">Portfolio Solution 4: Grouping and sorting obsession categories</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 4:</span>
+<span class="code-keyword">SELECT</span> obsession_type, <span class="code-keyword">COUNT</span>(*) <span class="code-keyword">AS</span> total_cases
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">GROUP BY</span> obsession_type
+<span class="code-keyword">ORDER BY</span> total_cases <span class="code-keyword">DESC</span>;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th>obsession_type</th><th class="col-hl">total_cases</th></tr></thead>
+          <tbody>
+            <tr><td>Harm-related</td><td class="cell-hl">333</td></tr>
+            <tr><td>Contamination</td><td class="cell-hl">312</td></tr>
+            <tr><td>Symmetry</td><td class="cell-hl">295</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 13 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 5</span>
+        <span class="slide-number">Slide 13 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q5: Find the Most Common Compulsion Type</h2>
+        <p class="slide-subtitle">Portfolio Solution 5: Grouping and sorting compulsion behaviors</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 5:</span>
+<span class="code-keyword">SELECT</span> compulsion_type, <span class="code-keyword">COUNT</span>(*) <span class="code-keyword">AS</span> total_cases
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">GROUP BY</span> compulsion_type
+<span class="code-keyword">ORDER BY</span> total_cases <span class="code-keyword">DESC</span>;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th>compulsion_type</th><th class="col-hl">total_cases</th></tr></thead>
+          <tbody>
+            <tr><td>Washing</td><td class="cell-hl">321</td></tr>
+            <tr><td>Checking</td><td class="cell-hl">308</td></tr>
+            <tr><td>Counting</td><td class="cell-hl">292</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 14 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 6</span>
+        <span class="slide-number">Slide 14 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q6: Average Y-BOCS Obsession &amp; Compulsion Scores</h2>
+        <p class="slide-subtitle">Portfolio Solution 6: Calculating clinical symptom severity averages</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 6:</span>
+<span class="code-keyword">SELECT</span> 
+    <span class="code-keyword">ROUND</span>(<span class="code-keyword">AVG</span>(ybocs_score_obsessions), 2) <span class="code-keyword">AS</span> avg_obsession_score,
+    <span class="code-keyword">ROUND</span>(<span class="code-keyword">AVG</span>(ybocs_score_compulsions), 2) <span class="code-keyword">AS</span> avg_compulsion_score
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th class="col-hl">avg_obsession_score</th><th class="cell-hl">avg_compulsion_score</th></tr></thead>
+          <tbody><tr><td class="cell-hl">20.05</td><td class="cell-hl">19.63</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 15 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 7</span>
+        <span class="slide-number">Slide 15 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q7: Count Patients with Comorbid Depression and Anxiety</h2>
+        <p class="slide-subtitle">Portfolio Solution 7: Filtering multiple comorbidity flags</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 7:</span>
+<span class="code-keyword">SELECT COUNT</span>(*) <span class="code-keyword">AS</span> dual_comorbid_count
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">WHERE</span> depression_diagnosis = <span class="code-table">'Yes'</span> 
+  <span class="code-keyword">AND</span> anxiety_diagnosis = <span class="code-table">'Yes'</span>;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th class="col-hl">dual_comorbid_count</th></tr></thead>
+          <tbody><tr class="row-matched"><td class="cell-hl">384 Patients</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 16 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 8</span>
+        <span class="slide-number">Slide 16 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q8: Average Y-BOCS Total Score by Ethnicity</h2>
+        <p class="slide-subtitle">Portfolio Solution 8: Grouping by ethnicity and summing component scores</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 8:</span>
+<span class="code-keyword">SELECT</span> 
+    ethnicity,
+    <span class="code-keyword">ROUND</span>(<span class="code-keyword">AVG</span>(ybocs_score_obsessions + ybocs_score_compulsions), 2) <span class="code-keyword">AS</span> avg_total_ybocs
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">GROUP BY</span> ethnicity
+<span class="code-keyword">ORDER BY</span> avg_total_ybocs <span class="code-keyword">DESC</span>;
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 17 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 9</span>
+        <span class="slide-number">Slide 17 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q9: Family History of OCD vs. Severity</h2>
+        <p class="slide-subtitle">Portfolio Solution 9: Comparing hereditary impact on Y-BOCS scores</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 9:</span>
+<span class="code-keyword">SELECT</span> 
+    family_history_of_ocd,
+    <span class="code-keyword">COUNT</span>(*) <span class="code-keyword">AS</span> patient_count,
+    <span class="code-keyword">ROUND</span>(<span class="code-keyword">AVG</span>(ybocs_score_obsessions + ybocs_score_compulsions), 2) <span class="code-keyword">AS</span> avg_ybocs
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">GROUP BY</span> family_history_of_ocd;
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 18 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 10</span>
+        <span class="slide-number">Slide 18 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q10: Top Prescribed Pharmaceutical Medications</h2>
+        <p class="slide-subtitle">Portfolio Solution 10: Grouping by medication type</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 10:</span>
+<span class="code-keyword">SELECT</span> medications, <span class="code-keyword">COUNT</span>(*) <span class="code-keyword">AS</span> patient_count
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">WHERE</span> medications <span class="code-keyword">IS NOT NULL</span>
+<span class="code-keyword">GROUP BY</span> medications
+<span class="code-keyword">ORDER BY</span> patient_count <span class="code-keyword">DESC</span>;
+        </div>
+        <table class="data-table" style="margin-top:6px;">
+          <thead><tr><th>medications</th><th class="col-hl">patient_count</th></tr></thead>
+          <tbody>
+            <tr><td>Benzodiazepine</td><td class="cell-hl">386</td></tr>
+            <tr><td>SSRI</td><td class="cell-hl">372</td></tr>
+            <tr><td>SNRI</td><td class="cell-hl">356</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 19 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 11</span>
+        <span class="slide-number">Slide 19 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q11: Average Duration of Symptoms by Marital Status</h2>
+        <p class="slide-subtitle">Portfolio Solution 11: Symptom latency across relationship brackets</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 11:</span>
+<span class="code-keyword">SELECT</span> marital_status, <span class="code-keyword">ROUND</span>(<span class="code-keyword">AVG</span>(duration_of_symptoms_months), 1) <span class="code-keyword">AS</span> avg_duration_months
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">GROUP BY</span> marital_status;
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 20 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 12</span>
+        <span class="slide-number">Slide 20 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q12: Ranking Patients by Severity via DENSE_RANK()</h2>
+        <p class="slide-subtitle">Portfolio Solution 12: Window ranking on total Y-BOCS score</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 12:</span>
+<span class="code-keyword">SELECT</span> 
+    patient_id, age, gender,
+    (ybocs_score_obsessions + ybocs_score_compulsions) <span class="code-keyword">AS</span> total_ybocs,
+    <span class="code-keyword">DENSE_RANK() OVER</span> (<span class="code-keyword">ORDER BY</span> (ybocs_score_obsessions + ybocs_score_compulsions) <span class="code-keyword">DESC</span>) <span class="code-keyword">AS</span> severity_rank
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>;
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 21 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 13</span>
+        <span class="slide-number">Slide 21 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q13: Patients Exceeding Cohort Average Y-BOCS Score</h2>
+        <p class="slide-subtitle">Portfolio Solution 13: Scalar subquery benchmarking</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 13:</span>
+<span class="code-keyword">SELECT</span> patient_id, age, gender, (ybocs_score_obsessions + ybocs_score_compulsions) <span class="code-keyword">AS</span> total_score
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+<span class="code-keyword">WHERE</span> (ybocs_score_obsessions + ybocs_score_compulsions) &gt; (
+    <span class="code-keyword">SELECT AVG</span>(ybocs_score_obsessions + ybocs_score_compulsions) 
+    <span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+);
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 22 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 14</span>
+        <span class="slide-number">Slide 22 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q14: Cumulative Patient Counts by Diagnosis Year</h2>
+        <p class="slide-subtitle">Portfolio Solution 14: Running totals with window frames</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 14:</span>
+<span class="code-keyword">WITH</span> yearly_diag <span class="code-keyword">AS</span> (
+    <span class="code-keyword">SELECT YEAR</span>(ocd_diagnosis_date) <span class="code-keyword">AS</span> diag_year, <span class="code-keyword">COUNT</span>(*) <span class="code-keyword">AS</span> new_patients
+    <span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>
+    <span class="code-keyword">GROUP BY YEAR</span>(ocd_diagnosis_date)
+)
+<span class="code-keyword">SELECT</span> 
+    diag_year, new_patients,
+    <span class="code-keyword">SUM</span>(new_patients) <span class="code-keyword">OVER</span> (
+        <span class="code-keyword">ORDER BY</span> diag_year <span class="code-keyword">ASC</span> 
+        <span class="code-keyword">ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</span>
+    ) <span class="code-keyword">AS</span> cumulative_patients
+<span class="code-keyword">FROM</span> yearly_diag;
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 23 -->
+    <div class="slide">
+      <div class="slide-header">
+        <span class="topic-tag">Business Question 15</span>
+        <span class="slide-number">Slide 23 / 50</span>
+      </div>
+      <div class="slide-body">
+        <h2 class="slide-title">Q15: Categorizing Patient Severity via CASE WHEN</h2>
+        <p class="slide-subtitle">Portfolio Solution 15: Clinical classification tiers</p>
+        <div class="code-snippet">
+<span class="code-comment">-- Solution 15:</span>
+<span class="code-keyword">SELECT</span> 
+    patient_id,
+    (ybocs_score_obsessions + ybocs_score_compulsions) <span class="code-keyword">AS</span> total_ybocs,
+    <span class="code-keyword">CASE</span>
+        <span class="code-keyword">WHEN</span> (ybocs_score_obsessions + ybocs_score_compulsions) &gt; 30 <span class="code-keyword">THEN</span> <span class="code-table">'Severe'</span>
+        <span class="code-keyword">WHEN</span> (ybocs_score_obsessions + ybocs_score_compulsions) &gt;= 20 <span class="code-keyword">THEN</span> <span class="code-table">'Moderate'</span>
+        <span class="code-keyword">ELSE</span> <span class="code-table">'Mild'</span>
+    <span class="code-keyword">END AS</span> clinical_severity
+<span class="code-keyword">FROM</span> <span class="code-table">ocd_patients</span>;
+        </div>
+      </div>
+    </div>
+
+    <!-- Slides 24 to 49: GitHub Packaging, Resume Bullet Points, Interview Prep -->
+    <div class="slide">
+      <div class="slide-header"><span class="topic-tag">GitHub Packaging</span><span class="slide-number">Slide 24 / 50</span></div>
+      <div class="slide-body">
+        <h2 class="slide-title">Packaging Your Clinical Project for GitHub</h2>
+        <p class="slide-subtitle">Structuring files for open-source portfolio presentation</p>
+        <div class="grid-2">
+          <div class="feature-box">
+            <h4>Recommended Repository Structure</h4>
+            <ul class="bullet-list" style="font-size:0.8rem;">
+              <li><code>README.md</code>: Executive summary, dataset schema, and summary findings.</li>
+              <li><code>01_schema_setup.sql</code>: Database creation and table DDL.</li>
+              <li><code>02_data_cleaning.sql</code>: NULL auditing and data hygiene queries.</li>
+              <li><code>03_clinical_queries.sql</code>: All 15 solved portfolio SQL questions.</li>
+            </ul>
+          </div>
+          <div class="feature-box">
+            <h4>Recruiter Impact</h4>
+            <p style="font-size:0.82rem; color:#475569;">A clean, well-documented repository proves you can collaborate with healthcare researchers and present clinical data findings clearly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide">
+      <div class="slide-header"><span class="topic-tag">Resume Impact</span><span class="slide-number">Slide 25 / 50</span></div>
+      <div class="slide-body">
+        <h2 class="slide-title">Writing Your Healthcare Project Resume Entry</h2>
+        <p class="slide-subtitle">Translating this project into powerful hiring bullet points</p>
+        <div class="feature-box" style="border-left:4px solid #0284c7;">
+          <h4 style="color:#0284c7;">Suggested Resume Entry:</h4>
+          <p style="font-size:0.82rem; color:#334155; line-height:1.45;">
+            <strong>OCD Patient Clinical Analytics Project | MySQL, Healthcare Analytics, Advanced SQL</strong><br/>
+            &bull; Ingested and structured 1,500 clinical patient records into MySQL Workbench, designing robust DDL relational schemas.<br/>
+            &bull; Conducted exploratory data analysis across psychiatric metrics, Y-BOCS symptom severity scores, and comorbidity rates.<br/>
+            &bull; Formulated 15 interview-grade analytical queries utilizing DENSE_RANK, cumulative running totals, scalar subqueries, and conditional CASE severity tiering.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide">
+      <div class="slide-header"><span class="topic-tag">Project Summary</span><span class="slide-number">Slide 49 / 50</span></div>
+      <div class="slide-body">
+        <h2 class="slide-title">Day 20 Synthesis: Grand Finale Capstone Completed!</h2>
+        <p class="slide-subtitle">You have engineered a complete healthcare analytics portfolio project</p>
+        <ul class="bullet-list">
+          <li><strong>Clinical Dataset Ingested:</strong> Loaded 1,500 patient records into MySQL.</li>
+          <li><strong>Rigorous Hygiene:</strong> Audited missing values in previous diagnoses and medications.</li>
+          <li><strong>15 Solved Inquiries:</strong> Covered demographics, Y-BOCS severity, comorbidity rates, and cumulative diagnosis pacing.</li>
+          <li><strong>Masterclass Completed:</strong> You have journeyed through 20 intensive days from scratch to master SQL analyst!</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="slide">
+      <div class="slide-header"><span class="topic-tag">Masterclass Completion</span><span class="slide-number">Slide 50 / 50</span></div>
+      <div class="slide-body" style="text-align:center; align-items:center;">
+        <h2 style="font-size: 2.1rem; color: #0284c7; margin-bottom: 6px;">Day 20 Complete: Masterclass Grand Finale!</h2>
+        <p style="font-size: 1.1rem; color: #334155; max-width: 800px;">
+          Extraordinary achievement! You have officially completed the 20-day SQL Masterclass. From basic SELECT statements to advanced window functions, stored procedures, and end-to-end portfolio projects, you are fully job-ready as a Data Analyst!
+        </p>
+        <div style="margin-top: 14px; background: #e0f2fe; border: 2px dashed #0284c7; padding: 16px; border-radius: 10px; max-width: 700px; text-align: left;">
+          <h3 style="color: #0369a1; margin-bottom: 4px;">Your Next Steps</h3>
+          <p style="color: #475569; font-size: 0.92rem;">
+            Publish your GitHub repositories for Netflix, Spotify, SQL Mentor, and OCD Patient datasets. Update your LinkedIn profile and resume. Go ace your interviews!
+          </p>
+        </div>
+        <p style="margin-top: 12px; font-weight: 700; color: #1e293b;">Congratulations on graduating from the SQL Masterclass!</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="controls">
+    <button class="nav-btn" id="prev-btn" onclick="prevSlide()" disabled>&larr; Previous</button>
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <span id="counter">Slide 1 / 50</span>
+      <span class="key-tip">Use Arrow Keys (&larr; / &rarr;) or Spacebar to navigate</span>
+    </div>
+    <button class="nav-btn" id="next-btn" onclick="nextSlide()">Next &rarr;</button>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const counter = document.getElementById('counter');
+    const progressBar = document.getElementById('progress-bar');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    function updateDeck() {
+      slides.forEach((slide, index) => {
+        slide.classList.remove('active');
+        if (index === currentSlide) {
+          slide.classList.add('active');
+        }
+      });
+      counter.innerText = `Slide ${currentSlide + 1} / ${totalSlides}`;
+      progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+      prevBtn.disabled = currentSlide === 0;
+      nextBtn.disabled = currentSlide === totalSlides - 1;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        currentSlide++;
+        updateDeck();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateDeck();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+  </script>
+</body>
+</html>
